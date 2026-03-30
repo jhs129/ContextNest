@@ -1,6 +1,6 @@
 # Context Nest
 
-**by [PromptOwl](https://promptowl.ai)** | [Website](https://promptowl.ai) | [Whitepaper](https://promptowl.ai/resources/contextnest-whitepaper/) | [Specification](https://github.com/PromptOwl/ContextNest-spec)
+**by [PromptOwl](https://promptowl.ai)** | [Website](https://promptowl.ai) | [Whitepaper](https://promptowl.ai/resources/contextnest-whitepaper/) | [Specification](https://github.com/PromptOwl/ContextNest-spec) | [Discord](https://discord.gg/fxcSQ5gq)
 
 Structured, versioned, and verifiable context for AI agents. Context Nest is an open standard for organizing knowledge as governed markdown documents — with hash-chained versioning, a deterministic query language, integrity verification, and full audit trails.
 
@@ -21,10 +21,11 @@ ctx init --starter developer
 Get up and running with a role-specific vault in seconds:
 
 ```bash
-ctx init --starter developer    # Engineering: architecture, API docs, dev setup
-ctx init --starter executive    # Leadership: strategy, market analysis, decisions
-ctx init --starter analyst      # Research/OSINT: case files, sources, methodology
-ctx init --starter team         # Teams: handbook, onboarding, runbooks
+ctx init --starter developer    # Engineering: architecture, coding standards, onboarding
+ctx init --starter executive    # Leadership: strategy, decisions, alignment
+ctx init --starter analyst      # Research: methodologies, sources, report templates
+ctx init --starter team         # Teams: processes, onboarding, knowledge base
+ctx init --starter sales        # Sales: objection handling, battlecards, enablement
 ```
 
 See all options: `ctx init --list-starters`
@@ -41,6 +42,7 @@ RAG solved retrieval. Context Nest solves **governance**.
 | Audit trails | None | Full injection tracing |
 | Structure | Flat chunks | Typed documents with relationships |
 | Live data | Static snapshots | Source nodes with MCP/REST/CLI hydration |
+| Agent skills | None | Governed, versioned skill nodes with triggers and guard rails |
 
 Read the full case in the [whitepaper](https://promptowl.ai/resources/contextnest-whitepaper/).
 
@@ -213,7 +215,49 @@ Call `jira_get_active_sprint` to get the current sprint,
 then `jira_get_sprint_issues` to list all tickets.
 ```
 
-### 6. Add context packs
+### 6. Add skill nodes
+
+Skill nodes define reusable procedures for AI agents — with triggers, typed inputs, required tools, and guard rails:
+
+```bash
+ctx add nodes/review-pr --type skill --title "Review PR" --tags "engineering,code-review"
+```
+
+```markdown
+---
+title: "Review PR"
+type: skill
+tags:
+  - "#engineering"
+  - "#code-review"
+status: draft
+version: 1
+skill:
+  trigger: "when asked to review a pull request"
+  inputs:
+    - name: pr_url
+      type: string
+      required: true
+  tools_required:
+    - gh_pr_view
+    - gh_pr_diff
+  output_format: markdown
+  guard_rails:
+    - "Do not approve or merge — only summarize and flag concerns"
+---
+
+# Review PR
+
+## Steps
+
+1. Fetch the PR metadata and diff
+2. Group changes by area
+3. Flag potential issues
+```
+
+Skills are queryable like any other node: `ctx query "type:skill + #engineering"`
+
+### 7. Add context packs
 
 Packs are saved queries in `packs/` as YAML files:
 
@@ -249,31 +293,36 @@ export CONTEXTNEST_VAULT_PATH=/path/to/your/vault
 |---|---|
 | `ctx init` | Initialize a new vault (supports `--starter` recipes) |
 | `ctx add <path>` | Create a new document (auto-publishes and regenerates index) |
+| `ctx add <path> --type skill` | Create a skill node with trigger, inputs, and guard rails |
 | `ctx update <path>` | Update a document's title, tags, or body (auto-publishes) |
 | `ctx delete <path>` | Delete a document and its version history |
+| `ctx read <path>` | Read and display a document in the terminal |
+| `ctx read <path> --html` | Render a document as styled HTML and open in browser |
 | `ctx validate [path]` | Validate documents against the spec |
 | `ctx publish <path>` | Publish a document (creates version + checkpoint) |
 
-### Querying & Injection
+### Querying
 
 | Command | Description |
 |---|---|
+| `ctx query <selector>` | Query context with graph traversal (default: 2 hops) |
+| `ctx query <selector> --hops 4` | Deeper traversal for more related context |
+| `ctx query <selector> --full` | Load all documents (bypass graph traversal) |
+| `ctx query @org/pack` | Query from a cloud-hosted pack via [PromptOwl](https://promptowl.ai) |
 | `ctx list` | List all documents (filter with `--type`, `--status`, `--tag`) |
 | `ctx search <query>` | Full-text search across vault documents |
-| `ctx resolve <selector>` | Execute a selector query |
-| `ctx inject <selector>` | Resolve context for AI agent consumption |
-| `ctx inject @org/pack` | Inject from a cloud-hosted pack via [PromptOwl](https://promptowl.ai) |
+| `ctx resolve <selector>` | Execute a selector query (low-level) |
 
 ### Selectors
 
 ```bash
-ctx inject "tag:#engineering"              # All docs with a tag
-ctx inject "type:document"                 # All docs of a type
-ctx inject "path:nodes/api-*"             # Glob match
-ctx inject "pack:engineering-essentials"   # All docs in a pack
-ctx inject "status:published"             # By status
-ctx inject "tag:#api + tag:#v2"           # Union
-ctx inject "tag:#api & status:published"  # Intersection
+ctx query "#engineering"                   # All docs with a tag
+ctx query "type:document"                  # All docs of a type
+ctx query "type:skill + #engineering"      # All engineering skills
+ctx query "pack:engineering-essentials"    # All docs in a pack
+ctx query "status:published"              # By status
+ctx query "#api + #v2"                    # Union
+ctx query "#api + status:published"       # Intersection
 ```
 
 ### Versioning & Integrity
@@ -349,12 +398,13 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 | Tool | Description |
 |---|---|
 | `vault_info` | Get vault identity and configuration summary |
-| `resolve` | Execute a selector query |
+| `resolve` | Execute a selector query with graph traversal |
 | `read_document` | Read a document by URI or path |
 | `list_documents` | List documents with optional type/status/tag filters |
+| `document_format` | Get the document format spec (call before creating docs) |
 | `read_index` | Return the context.yaml index |
 | `read_pack` | Resolve and return a context pack with documents |
-| `search` | Full-text search across vault documents |
+| `search` | Full-text search with graph traversal |
 | `verify_integrity` | Verify all hash chains |
 | `list_checkpoints` | List recent checkpoints |
 | `read_version` | Read a specific version of a document |
@@ -386,10 +436,12 @@ pnpm clean          # Clean all build artifacts
 ctx init --starter developer       # 1. Create a vault with starter recipe
                                    # 2. Edit CONTEXT.md and config.yaml
 ctx add nodes/my-doc               # 3. Add documents (auto-publishes & indexes)
-ctx update nodes/my-doc --title X  # 4. Update as needed (auto-publishes & indexes)
-ctx validate                       # 5. Validate
-ctx verify                         # 6. Verify integrity
-                                   # 7. Start MCP server for AI access
+ctx add nodes/my-skill --type skill # 4. Add skills for agent procedures
+ctx read nodes/my-doc --html       # 5. View any document in the browser
+ctx query "#engineering"           # 6. Query with graph traversal
+ctx validate                       # 7. Validate
+ctx verify                         # 8. Verify integrity
+                                   # 9. Start MCP server for AI access
 ```
 
 ## License
@@ -401,8 +453,8 @@ All packages are licensed under **AGPL-3.0**:
 - **MCP Server** ([`@promptowl/contextnest-mcp-server`](https://www.npmjs.com/package/@promptowl/contextnest-mcp-server)): **AGPL-3.0**
 - **Specification** ([CONTEXT_NEST_SPEC.md](CONTEXT_NEST_SPEC.md)): **Apache-2.0** — open standard
 
-AGPL-3.0 ensures all improvements stay open source. You are free to use, modify, and distribute Context Nest, but modifications to the source must be shared under the same license. Commercial licensing is available from [PromptOwl](https://promptowl.com) for organizations that need to embed or redistribute without AGPL obligations.
+AGPL-3.0 ensures all improvements stay open source. You are free to use, modify, and distribute Context Nest, but modifications to the source must be shared under the same license. Commercial licensing is available from [PromptOwl](https://promptowl.ai) for organizations that need to embed or redistribute without AGPL obligations.
 
 ---
 
-**[PromptOwl](https://promptowl.ai)** — Context governance for AI agents
+**[PromptOwl](https://promptowl.ai)** — Context governance for AI agents | [Join our Discord](https://discord.gg/fxcSQ5gq)

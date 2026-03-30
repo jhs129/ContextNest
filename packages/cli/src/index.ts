@@ -33,6 +33,7 @@ import {
 import type { ContextNode, Frontmatter, LayoutMode } from "@promptowl/contextnest-engine";
 import { getStarter, listStarters } from "./starters/index.js";
 import { generateWelcomeHtml, openInBrowser } from "./welcome-html.js";
+import { renderDocumentHtml } from "./render-html.js";
 
 const program = new Command();
 
@@ -129,7 +130,7 @@ program
   .description("Initialize a new Context Nest vault")
   .option("-l, --layout <mode>", "Layout mode: structured or obsidian", "structured")
   .option("-n, --name <name>", "Vault name", "My Context Nest")
-  .option("-s, --starter <recipe>", "Starter recipe: developer, executive, analyst, team")
+  .option("-s, --starter <recipe>", "Starter recipe: developer, executive, analyst, team, sales")
   .option("--list-starters", "List available starter recipes")
   .action(async (opts) => {
     // List starters and exit
@@ -235,7 +236,8 @@ This vault was initialized without a starter recipe. To help the user get starte
 2. Recommend a starter recipe based on their answer:
    - developer  — Software engineering teams
    - executive  — Strategic leadership
-   - analyst    — Research, OSINT, investigations
+   - analyst    — Research and analysis
+   - sales      — Sales enablement
    - team       — General team knowledge base
 3. Run: ctx init --starter <recipe> (in the vault directory)
    Note: re-running init with --starter will add the starter content to the existing vault.
@@ -258,6 +260,80 @@ This vault was initialized without a starter recipe. To help the user get starte
     }
   });
 
+// ─── ctx read ──────────────────────────────────────────────────────────────────
+
+program
+  .command("read <path>")
+  .description("Read and display a document from the vault")
+  .option("--html", "Render as styled HTML and open in browser")
+  .option("--out <file>", "Save HTML to file instead of opening in browser (requires --html)")
+  .option("--raw", "Output raw file content (frontmatter + body)")
+  .action(async (path, opts) => {
+    const storage = getStorage();
+    const id = path.replace(/\.md$/, "");
+    const doc = await storage.readDocument(id);
+
+    if (opts.raw) {
+      console.log(doc.rawContent);
+      return;
+    }
+
+    if (opts.html) {
+      const config = await storage.readConfig();
+      const vaultName = config?.name || undefined;
+      const html = renderDocumentHtml(doc, vaultName);
+
+      if (opts.out) {
+        const outPath = pathMod.resolve(opts.out);
+        await writeFile(outPath, html, "utf-8");
+        console.log(chalk.green(`Written to ${outPath}`));
+      } else {
+        const tmpPath = pathMod.join(getVaultRoot(), ".context", `read-${id.replace(/\//g, "-")}.html`);
+        await mkdir(pathMod.dirname(tmpPath), { recursive: true });
+        await writeFile(tmpPath, html, "utf-8");
+        openInBrowser(tmpPath);
+        console.log(chalk.dim(`Opened in browser: ${tmpPath}`));
+      }
+      return;
+    }
+
+    // Terminal output
+    console.log(chalk.bold.underline(doc.frontmatter.title));
+    console.log();
+
+    const meta: string[] = [];
+    if (doc.frontmatter.type) meta.push(`${chalk.dim("type:")} ${doc.frontmatter.type}`);
+    if (doc.frontmatter.status) meta.push(`${chalk.dim("status:")} ${doc.frontmatter.status}`);
+    if (doc.frontmatter.version) meta.push(`${chalk.dim("v")}${doc.frontmatter.version}`);
+    if (meta.length) console.log(meta.join("  "));
+
+    if (doc.frontmatter.tags?.length) {
+      console.log(chalk.dim("tags:") + " " + doc.frontmatter.tags.map((t) => chalk.cyan(t)).join(" "));
+    }
+
+    if (doc.frontmatter.skill) {
+      console.log(chalk.dim("trigger:") + " " + doc.frontmatter.skill.trigger);
+      if (doc.frontmatter.skill.tools_required?.length) {
+        console.log(chalk.dim("tools:") + " " + doc.frontmatter.skill.tools_required.join(", "));
+      }
+      if (doc.frontmatter.skill.guard_rails?.length) {
+        console.log(chalk.dim("guard rails:"));
+        for (const g of doc.frontmatter.skill.guard_rails) {
+          console.log(`  ${chalk.yellow("!")} ${g}`);
+        }
+      }
+    }
+
+    if (doc.frontmatter.source) {
+      console.log(chalk.dim("transport:") + " " + doc.frontmatter.source.transport);
+      if (doc.frontmatter.source.server) console.log(chalk.dim("server:") + " " + doc.frontmatter.source.server);
+      console.log(chalk.dim("tools:") + " " + doc.frontmatter.source.tools.join(", "));
+    }
+
+    console.log(chalk.dim("─".repeat(60)));
+    console.log(doc.body.trim());
+  });
+
 // ─── ctx add ───────────────────────────────────────────────────────────────────
 
 program
@@ -267,6 +343,7 @@ program
   .option("--title <title>", "Document title")
   .option("--tags <tags>", "Comma-separated tags")
   .option("--body <body>", "Markdown body content")
+  .option("--trigger <trigger>", "Skill trigger description (for --type skill)")
   .action(async (path, opts) => {
     const storage = getStorage();
     const id = path.replace(/\.md$/, "");
@@ -284,11 +361,31 @@ program
       ...(tagList ? { tags: tagList } : {}),
     };
 
+    // Scaffold skill block for skill nodes
+    if (opts.type === "skill") {
+      frontmatter.skill = {
+        trigger: opts.trigger || `when asked to ${title.toLowerCase()}`,
+        inputs: [],
+        tools_required: [],
+        output_format: "markdown",
+        guard_rails: [],
+      };
+    }
+
+    let body: string;
+    if (opts.body) {
+      body = `\n${opts.body}\n`;
+    } else if (opts.type === "skill") {
+      body = `\n# ${title}\n\n## Steps\n\n1. \n2. \n3. \n\n## Expected Output\n\nDescribe what the agent should produce.\n`;
+    } else {
+      body = `\n# ${title}\n\n`;
+    }
+
     const node: ContextNode = {
       id,
       filePath: "",
       frontmatter,
-      body: opts.body ? `\n${opts.body}\n` : `\n# ${title}\n\n`,
+      body,
       rawContent: "",
     };
 
@@ -616,7 +713,7 @@ async function queryFromCloud(selector: string, opts: { json?: boolean }): Promi
   }
 
   const [, org, packName] = match;
-  const apiUrl = process.env.PROMPTOWL_API_URL || "https://api.promptowl.com";
+  const apiUrl = process.env.PROMPTOWL_API_URL || "https://api.promptowl.ai";
   const token = await loadCloudToken();
 
   console.log(chalk.dim(`  ☁ Fetching from PromptOwl cloud...`));
