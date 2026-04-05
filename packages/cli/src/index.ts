@@ -1115,5 +1115,74 @@ program
     }
   });
 
+// ─── ctx push ────────────────────────────────────────────────────────────────
+
+program
+  .command("push")
+  .description("Push the local vault to a hosted ContextNest server")
+  .requiredOption("--server <url>", "Hosted engine URL (e.g. http://localhost:3737)")
+  .requiredOption("--nest <id>", "Target nest ID")
+  .requiredOption("--key <apiKey>", "API key (cnst_...)")
+  .option("--include-drafts", "Include draft documents (default: published only)", false)
+  .action(async (opts) => {
+    const storage = getStorage();
+    const docs = await storage.discoverDocuments();
+
+    const filtered = opts.includeDrafts
+      ? docs
+      : docs.filter((d) => d.frontmatter.status === "published" || d.frontmatter.status === undefined);
+
+    if (filtered.length === 0) {
+      console.log(chalk.yellow("No documents to push. Use --include-drafts to include draft documents."));
+      return;
+    }
+
+    // Read CONTEXT.md
+    const contextMd = await storage.readContextMd();
+
+    // Build payload
+    const documents = filtered.map((doc) => ({
+      title: doc.frontmatter.title || doc.id,
+      content: doc.body || "",
+      type: doc.frontmatter.type || "document",
+      tags: (doc.frontmatter.tags || []).map((t: string) => (t.startsWith("#") ? t : `#${t}`)),
+    }));
+
+    const serverUrl = opts.server.replace(/\/$/, "");
+    const url = `${serverUrl}/nests/${opts.nest}/publish`;
+
+    console.log(chalk.dim(`Pushing ${documents.length} documents to ${serverUrl}...`));
+
+    const body: Record<string, unknown> = { documents };
+    if (contextMd) body.context_md = contextMd;
+
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${opts.key}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        console.error(chalk.red(`Push failed (${res.status}): ${err.error || res.statusText}`));
+        process.exit(1);
+      }
+
+      const data = (await res.json()) as { published: number; context_md_updated: boolean; node_ids: string[] };
+      console.log(chalk.green(`Pushed ${data.published} document${data.published !== 1 ? "s" : ""}`));
+      if (data.context_md_updated) console.log(chalk.green("  CONTEXT.md updated"));
+      for (const id of data.node_ids) {
+        console.log(chalk.dim(`  + ${id}`));
+      }
+    } catch (err: any) {
+      console.error(chalk.red(`Push failed: ${err.message}`));
+      process.exit(1);
+    }
+  });
+
 // Parse and run
 program.parse();
