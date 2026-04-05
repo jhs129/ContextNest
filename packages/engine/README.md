@@ -1,6 +1,6 @@
 # @promptowl/contextnest-engine
 
-Core engine for [Context Nest](https://github.com/PromptOwl/context-nest) — structured, versioned context vaults for AI agents.
+Core engine for [Context Nest](https://github.com/PromptOwl/ContextNest) — structured, versioned context vaults for AI agents.
 
 ## Install
 
@@ -13,8 +13,9 @@ npm install @promptowl/contextnest-engine
 The engine provides the core building blocks for Context Nest vaults:
 
 - **Storage** — Read/write documents, version histories, checkpoints, and config from the vault file system
-- **Parsing & Validation** — Parse markdown documents with YAML frontmatter, validate against the spec
+- **Parsing & Validation** — Parse markdown documents with YAML frontmatter, validate against the spec (including skill and source node rules)
 - **Selector Grammar** — Deterministic query language for selecting documents by tag, type, URI, pack, and boolean combinations
+- **Skill Nodes** — First-class support for `type: skill` nodes with trigger, inputs, tools_required, output_format, and guard_rails
 - **Graph Traversal** — Hop-based BFS traversal using `context.yaml` as a lightweight graph index, with priority-weighted edges
 - **URI Resolution** — Resolve `contextnest://` URIs to documents, tags, folders, or search results
 - **Versioning** — Hash-chained version history with keyframe + diff reconstruction
@@ -32,6 +33,9 @@ const engine = new GraphQueryEngine(storage);
 
 // Query with graph traversal (default: 2 hops)
 const result = await engine.query('#engineering + type:document', { hops: 3 });
+
+// Query skill nodes
+const skills = await engine.query('type:skill + #engineering', { hops: 2 });
 
 for (const doc of result.documents) {
   console.log(`${doc.id}: ${doc.frontmatter.title}`);
@@ -66,9 +70,10 @@ The engine uses `context.yaml` as a pre-built graph index. Queries evaluate sele
 
 ## Links
 
-- [Context Nest repo](https://github.com/PromptOwl/context-nest)
+- [Context Nest repo](https://github.com/PromptOwl/ContextNest)
 - [Specification](https://github.com/PromptOwl/context-nest-spec)
-- [PromptOwl](https://promptowl.com)
+- [PromptOwl](https://promptowl.ai)
+- [Discord](https://discord.gg/fxcSQ5gq)
 
 ## License
 

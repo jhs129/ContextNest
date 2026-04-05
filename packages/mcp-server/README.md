@@ -1,6 +1,6 @@
 # @promptowl/contextnest-mcp-server
 
-MCP server for [Context Nest](https://github.com/PromptOwl/context-nest) — gives AI agents direct access to your context vault via the [Model Context Protocol](https://modelcontextprotocol.io).
+MCP server for [Context Nest](https://github.com/PromptOwl/ContextNest) — gives AI agents direct access to your context vault via the [Model Context Protocol](https://modelcontextprotocol.io). Supports all node types including documents, source nodes, and skill nodes.
 
 ## Install
 
@@ -60,7 +60,7 @@ CONTEXTNEST_VAULT_PATH=/path/to/vault contextnest-mcp
 | `search` | Full-text search with graph traversal |
 | `read_pack` | Resolve and return a context pack |
 | `document_format` | Get the document format spec (call before creating docs) |
-| `create_document` | Create a new document |
+| `create_document` | Create a new document (supports all types including skill nodes) |
 | `update_document` | Update an existing document |
 | `delete_document` | Delete a document and its version history |
 | `publish_document` | Publish a document (bump version, checkpoint) |
@@ -76,11 +76,22 @@ The `resolve`, `search`, and `read_pack` tools support graph-aware queries:
 - **`hops`** (number, default: 2) — Controls traversal depth from matched documents. More hops = more context loaded, slower. Fewer hops = faster, less context.
 - **`full`** (boolean, default: false) — Bypass graph traversal and load all documents (legacy mode).
 
+### Skill Nodes
+
+Agents can discover and use skill nodes — governed procedures with triggers, inputs, and guard rails:
+
+```
+resolve({ selector: "type:skill + #engineering" })  → all engineering skills
+list_documents({ type: "skill" })                    → all skill nodes
+create_document({ type: "skill", trigger: "..." })   → create a new skill
+```
+
 ## Links
 
-- [Context Nest repo](https://github.com/PromptOwl/context-nest)
+- [Context Nest repo](https://github.com/PromptOwl/ContextNest)
 - [Specification](https://github.com/PromptOwl/context-nest-spec)
-- [PromptOwl](https://promptowl.com)
+- [PromptOwl](https://promptowl.ai)
+- [Discord](https://discord.gg/fxcSQ5gq)
 
 ## License
 

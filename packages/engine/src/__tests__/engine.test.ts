@@ -120,6 +120,68 @@ source:
     expect(result.errors.some((e) => e.rule === 17)).toBe(true);
   });
 
+  it("validates skill nodes require skill block", () => {
+    const content = `---
+title: "Bad Skill"
+type: skill
+---
+
+# Bad Skill
+`;
+    const node = parseDocument("/bad-skill.md", content, "bad-skill");
+    const result = validateDocument(node);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.message.includes("Skill block is required"))).toBe(true);
+  });
+
+  it("validates skill block not allowed on non-skill types", () => {
+    const content = `---
+title: "Bad Doc"
+type: document
+skill:
+  trigger: "when asked to do something"
+---
+
+# Bad Doc
+`;
+    const node = parseDocument("/bad-doc-skill.md", content, "bad-doc-skill");
+    const result = validateDocument(node);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.message.includes("Skill block must not be present"))).toBe(true);
+  });
+
+  it("validates valid skill nodes pass", () => {
+    const content = `---
+title: "Good Skill"
+type: skill
+tags:
+  - "#engineering"
+status: draft
+version: 1
+skill:
+  trigger: "when asked to review a PR"
+  inputs:
+    - name: pr_url
+      type: string
+      required: true
+  tools_required:
+    - gh_pr_view
+  output_format: markdown
+  guard_rails:
+    - "Do not merge"
+---
+
+# Good Skill
+
+## Steps
+
+1. Review the PR
+`;
+    const node = parseDocument("/good-skill.md", content, "good-skill");
+    const result = validateDocument(node);
+    expect(result.valid).toBe(true);
+  });
+
   it("roundtrips parse and serialize", () => {
     const content = `---
 title: "Roundtrip Test"
@@ -793,6 +855,7 @@ version: 1
 
     // Write a fake history file
     await tempStorage.writeHistory("nodes/version-delete", {
+      keyframe_interval: 10,
       versions: [
         {
           version: 1,

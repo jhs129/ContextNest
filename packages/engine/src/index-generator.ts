@@ -60,6 +60,19 @@ export function generateContextYaml(
       };
     }
 
+    // Include skill summary for skill nodes
+    if (doc.frontmatter.type === "skill" && doc.frontmatter.skill) {
+      entry.skill = {
+        trigger: doc.frontmatter.skill.trigger,
+        ...(doc.frontmatter.skill.tools_required?.length
+          ? { tools_required: doc.frontmatter.skill.tools_required }
+          : {}),
+        ...(doc.frontmatter.skill.output_format
+          ? { output_format: doc.frontmatter.skill.output_format }
+          : {}),
+      };
+    }
+
     return entry;
   });
 

@@ -194,6 +194,7 @@ Maintained by @jane.smith with oversight from @team:engineering.
 | `checksum` | string | — | SHA-256 of the document body (all content after the closing `---` of the frontmatter, including the leading newline). Format: `sha256:<64 lowercase hex>` |
 | `metadata` | object | `{}` | Extensible metadata (word_count, etc.) |
 | `source` | object | — | Source metadata block. Present only on `type: source` nodes (see §1.9) |
+| `skill` | object | — | Skill metadata block. Present only on `type: skill` nodes (see §1.10) |
 
 ### 1.6 Node Types
 
@@ -209,8 +210,9 @@ Every document has a `type` that classifies its content:
 | `source` | Instructions for fetching live context from external services | Sprint tickets from Jira, PR activity from GitHub |
 | `tool` | Tool documentation and usage guides | API integration guide, deployment workflow |
 | `reference` | External references, links, citations | Research papers, industry standards |
+| `skill` | Reusable agent procedures with triggers, inputs, and guard rails | PR review workflow, bug triage, RFC drafting |
 
-The `source` type is described in detail in §1.9.
+The `source` type is described in detail in §1.9. The `skill` type is described in detail in §1.10.
 
 ### 1.7 Inline Syntax
 
@@ -492,6 +494,143 @@ metadata:
   source_data_fetched_at: 2024-03-01T12:05:00Z
 ---
 ```
+
+### 1.10 Skill Nodes
+
+A skill node is a markdown document that defines a **reusable, governed procedure** for an AI agent. While source nodes tell agents *where to get data*, skill nodes tell agents *how to perform tasks*. Skills are first-class nodes — authored, versioned, checksummed, and queryable like any other node. They participate in selectors, packs, context links, and integrity verification.
+
+The key distinction: when an agent resolves a `type: document` node, it reads knowledge. When it resolves a `type: skill` node, it reads **a procedure to follow** — what to do, in what order, with what constraints, and what output to produce.
+
+#### 1.10.1 Skill Frontmatter
+
+Skill nodes carry a `skill` metadata block in frontmatter. This block contains the structured data needed for discovery and invocation. The step-by-step procedure, examples, edge cases, and output templates live in the markdown body.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `skill.trigger` | string | Yes | Natural language description of when this skill should be invoked |
+| `skill.inputs` | array | No | Input parameters the skill accepts. Each entry: `{ name, type, description?, required?, default? }` |
+| `skill.tools_required` | string[] | No | MCP tools or capabilities the agent needs to execute this skill |
+| `skill.output_format` | string | No | Expected output format: `markdown`, `json`, `text`, or `code` |
+| `skill.guard_rails` | string[] | No | Constraints or safety rules the agent MUST follow during execution |
+
+Input parameter types: `string`, `number`, `boolean`, `array`, `object`.
+
+#### 1.10.2 Skill Examples
+
+**Engineering skill — code review:**
+
+```yaml
+---
+title: "Summarize PR Changes"
+type: skill
+tags:
+  - "#engineering"
+  - "#code-review"
+status: published
+version: 1
+skill:
+  trigger: "when asked to review or summarize a pull request"
+  inputs:
+    - name: pr_url
+      type: string
+      description: "URL or number of the pull request"
+      required: true
+  tools_required:
+    - gh_pr_view
+    - gh_pr_diff
+  output_format: markdown
+  guard_rails:
+    - "Do not approve or merge — only summarize and flag concerns"
+    - "Always note if tests are missing for changed code paths"
+---
+
+# Summarize PR Changes
+
+## Steps
+
+1. Fetch the PR metadata using `gh_pr_view`
+2. Fetch the diff using `gh_pr_diff`
+3. Group changes by area
+4. Flag potential issues
+
+## Expected Output
+
+A structured summary with overview, changes by area, concerns, and verdict.
+```
+
+**Operational skill — incident triage:**
+
+```yaml
+---
+title: "Triage Bug Report"
+type: skill
+tags:
+  - "#engineering"
+  - "#bugs"
+status: published
+version: 1
+skill:
+  trigger: "when asked to triage or analyze a bug report"
+  inputs:
+    - name: bug_description
+      type: string
+      required: true
+  tools_required: []
+  output_format: markdown
+  guard_rails:
+    - "Always ask for reproduction steps if not provided"
+    - "Never dismiss a bug without evidence it cannot occur"
+---
+
+# Triage Bug Report
+
+## Steps
+
+1. Parse the bug report for symptoms and reproduction steps
+2. Assess severity (P0–P3)
+3. Suggest investigation path and potential root causes
+```
+
+#### 1.10.3 Referencing Skill Nodes
+
+Skill nodes are referenced using the same `contextnest://` URI syntax as any other node:
+
+```markdown
+For code review procedures, see
+[Summarize PR Changes](contextnest://nodes/summarize-pr).
+```
+
+Skills are queryable by type: `ctx query "type:skill"` returns all skills. Combined with tags: `ctx query "type:skill + #engineering"` returns engineering skills.
+
+#### 1.10.4 Skill Packs
+
+Skills can be grouped into packs for distribution:
+
+```yaml
+id: engineering-skills
+label: Engineering Skills
+description: Reusable AI agent skills for engineering workflows
+query: "type:skill + #engineering"
+agent_instructions: >
+  When a user request matches a skill trigger, follow the steps
+  defined in that skill document rather than improvising.
+```
+
+Cloud-hosted skill packs (`ctx query @org/engineering-skills`) enable distribution of governed, versioned agent procedures without sharing source files.
+
+#### 1.10.5 Skill vs Prompt Nodes
+
+Both `type: prompt` and `type: skill` contain instructions for agents, but they serve different purposes:
+
+| | Prompt | Skill |
+|---|---|---|
+| Purpose | Text template to fill in | Procedure to execute |
+| Inputs | Template variables | Typed parameters with validation |
+| Tools | None | May require MCP tools |
+| Guard rails | None | Explicit constraints |
+| Output | Filled template | Task result |
+
+Use `prompt` for text generation templates. Use `skill` for multi-step procedures that may involve tool calls, have safety constraints, and produce structured output.
 
 ---
 
@@ -1496,10 +1635,20 @@ In addition to the base validation rules, `type: source` nodes MUST satisfy:
 16. If `source.cache_ttl` is present, it MUST be a positive integer
 17. The `source` block MUST NOT be present on nodes where `type` is not `source`
 
-### 13.2 Cross-Reference Validation
+### 13.2 Skill Node Validation
 
-18. If a `type: source` node declares `depends_on` referencing source X, and the node's body contains an inline `contextnest://` link to X, implementations SHOULD NOT flag this as redundant — it is the recommended pattern (§1.9.4)
-19. If a `type: source` node's body contains inline `contextnest://` links to other source nodes that are NOT listed in `depends_on`, implementations SHOULD emit a warning suggesting the dependency be declared in frontmatter
+In addition to the base validation rules, `type: skill` nodes MUST satisfy:
+
+18. The `skill` block MUST be present in frontmatter
+19. `skill.trigger` MUST be present and MUST be a non-empty string
+20. If `skill.inputs` is present, each entry MUST have a `name` (string) and `type` (one of: `string`, `number`, `boolean`, `array`, `object`)
+21. If `skill.output_format` is present, it MUST be one of: `markdown`, `json`, `text`, `code`
+22. The `skill` block MUST NOT be present on nodes where `type` is not `skill`
+
+### 13.3 Cross-Reference Validation
+
+23. If a `type: source` node declares `depends_on` referencing source X, and the node's body contains an inline `contextnest://` link to X, implementations SHOULD NOT flag this as redundant — it is the recommended pattern (§1.9.4)
+24. If a `type: source` node's body contains inline `contextnest://` links to other source nodes that are NOT listed in `depends_on`, implementations SHOULD emit a warning suggesting the dependency be declared in frontmatter
 
 **Suggested MIME type**: `text/markdown; variant=context-nest`
 

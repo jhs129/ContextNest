@@ -10,6 +10,8 @@ export type {
   Transport,
   FederationMode,
   SourceMeta,
+  SkillInput,
+  SkillMeta,
   Frontmatter,
   ContextNode,
   EdgeType,
