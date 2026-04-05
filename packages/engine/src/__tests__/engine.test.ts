@@ -13,6 +13,7 @@ import {
   evaluate,
   PackLoader,
   sha256,
+  normalizeForHash,
   computeContentHash,
   computeChainHash,
   computeCheckpointHash,
@@ -416,6 +417,25 @@ describe("Integrity", () => {
   it("computes content_hash", () => {
     const hash = computeContentHash("test content");
     expect(hash).toMatch(/^sha256:[a-f0-9]{64}$/);
+  });
+
+  it("normalizeForHash strips BOM and normalizes line endings", () => {
+    expect(normalizeForHash("\uFEFFhello")).toBe("hello");
+    expect(normalizeForHash("a\r\nb\r\n")).toBe("a\nb\n");
+    expect(normalizeForHash("a\rb")).toBe("a\nb");
+    expect(normalizeForHash("\uFEFFa\r\nb\rc")).toBe("a\nb\nc");
+  });
+
+  it("content_hash is identical for LF and CRLF content", () => {
+    const hashLF = computeContentHash("line1\nline2\n");
+    const hashCRLF = computeContentHash("line1\r\nline2\r\n");
+    expect(hashLF).toBe(hashCRLF);
+  });
+
+  it("content_hash is identical with and without BOM", () => {
+    const hashNoBom = computeContentHash("hello world");
+    const hashBom = computeContentHash("\uFEFFhello world");
+    expect(hashNoBom).toBe(hashBom);
   });
 
   it("computes chain_hash with genesis sentinel", () => {

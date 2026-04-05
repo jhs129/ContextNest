@@ -119,6 +119,7 @@ export { VersionManager } from "./versioning.js";
 
 // Integrity
 export {
+  normalizeForHash,
   sha256,
   computeContentHash,
   computeChainHash,

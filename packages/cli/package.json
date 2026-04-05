@@ -1,6 +1,6 @@
 {
   "name": "@promptowl/contextnest-cli",
-  "version": "0.9.5",
+  "version": "0.9.6",
   "repository": { "type": "git", "url": "https://github.com/PromptOwl/ContextNest.git", "directory": "packages/cli" },
   "description": "CLI for structured AI agent knowledge bases — versioned documents, deterministic queries, integrity verification, and MCP integration",
   "homepage": "https://github.com/PromptOwl/ContextNest",
