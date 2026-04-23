@@ -6,7 +6,7 @@
  * that AI agents read from stdout to interactively generate a tailored CONTEXT.md.
  */
 
-import { getPostInitPrompt } from "./agent-config-base.js";
+import { getPostInitPrompt, getDeveloperPostInitPrompt } from "./agent-config-base.js";
 import type { PostInitPrompt } from "./agent-config-base.js";
 
 export interface StarterNode {
@@ -251,7 +251,7 @@ agent_instructions: >
     },
   ],
   getPrompt() {
-    return getPostInitPrompt(this.id, this.description);
+    return getDeveloperPostInitPrompt();
   },
 };
 

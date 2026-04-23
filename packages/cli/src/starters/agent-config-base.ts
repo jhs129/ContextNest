@@ -56,3 +56,64 @@ Use this role context to guide your questions and the CONTEXT.md you generate.`;
     instructions: `${roleHint}\n\n${CONTEXT_MD_GENERATION_INSTRUCTIONS}`,
   };
 }
+
+const DEVELOPER_INSTRUCTIONS = `
+[STARTER: developer] — Engineering vault
+[ACTION REQUIRED — SEED THE NEST]
+
+This vault was just created with the \`developer\` starter. Your job is to
+help the user turn their scattered engineering knowledge into a structured
+second brain — not to fill out a governance worksheet. Governance exists in
+this tool but it runs silently. Don't mention versioning, hash chains, or
+compliance unless the user asks.
+
+Session 1 has ONE goal: produce ONE real node from real source material.
+Stop after that one node. One node is the win — the user should leave
+thinking "I want to come back tomorrow with another one." Do not try to
+populate the whole vault in one session. Do not create packs, checkpoints,
+or skill nodes today.
+
+Step 1 — Ask the user what they want to capture first. Offer concrete
+options:
+  • "A recent architecture decision — the 'why we did X' thing that's
+    currently only in your head, a PR description, or a Slack thread"
+  • "A 3-line architecture summary of this codebase (I'll read the repo
+    and draft it, you edit)"
+  • "A piece of tribal knowledge — the thing you'd tell a new hire on day
+    one that isn't written down anywhere"
+
+Step 2 — If they point to source material (a repo path, a folder of docs,
+a pasted Slack thread, a PR link), read it. If they don't have source
+material, interview them briefly — 2-3 questions, not 10.
+
+Step 3 — Draft the node. Use \`ctx add nodes/<slug> --type document --title
+"<title>" --tags "<tags>"\` to create it, then write the body with the
+Write tool. Keep it tight — 100-300 words is plenty. Show the drafted body
+to the user before moving on — if they want changes, edit the file and
+explain that every edit is captured in version history silently.
+
+Step 4 — Write a minimal CONTEXT.md at the vault root with: project name,
+one sentence on what this vault is for (from their answer), and the rule
+"prefer structured nodes over dumping files into context."
+
+Step 5 — Tell the user: "You have one node. Next time you want to capture
+something — a decision, a gotcha, a piece of tribal knowledge — just ask
+me. The nest gets denser every time you come back."
+
+DO NOT:
+  • Fill out multiple scaffolded nodes in one session
+  • Talk about versioning, hash chains, governance, or compliance
+  • Generate a wall of template markdown for the user to fill in
+  • Create packs, checkpoints, or skill nodes in session 1
+  • Claim the vault "passes SOC 2" — it's auditable by design, not certified
+
+Available tools: \`ctx add <path> --type <type> --title "<title>" --tags
+"<tags>"\`, \`ctx list\`, \`ctx read <path>\`, the Write tool.
+`.trim();
+
+export function getDeveloperPostInitPrompt(): PostInitPrompt {
+  return {
+    context: BASE_CONTEXT,
+    instructions: DEVELOPER_INSTRUCTIONS,
+  };
+}
