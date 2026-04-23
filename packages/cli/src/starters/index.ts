@@ -6,7 +6,7 @@
  * that AI agents read from stdout to interactively generate a tailored CONTEXT.md.
  */
 
-import { getPostInitPrompt, getDeveloperPostInitPrompt } from "./agent-config-base.js";
+import { getPostInitPrompt, getDeveloperPostInitPrompt, getPersonalPostInitPrompt } from "./agent-config-base.js";
 import type { PostInitPrompt } from "./agent-config-base.js";
 
 export interface StarterNode {
@@ -1113,10 +1113,24 @@ agent_instructions: >
   },
 };
 
+// ─── Personal Starter ──────────────────────────────────────────────────────────
+
+const personal: Starter = {
+  id: "personal",
+  name: "Personal / Second Brain",
+  description: "A general-purpose second brain for ideas, decisions, learning, and reference material — no codebase required",
+  nodes: [],
+  packs: [],
+  getPrompt() {
+    return getPersonalPostInitPrompt();
+  },
+};
+
 // ─── Registry ───────────────────────────────────────────────────────────────────
 
 export const starters = new Map<string, Starter>([
   ["developer", developer],
+  ["personal", personal],
   ["executive", executive],
   ["analyst", analyst],
   ["team", team],
