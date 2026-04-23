@@ -13,9 +13,16 @@ describe("getDeveloperPostInitPrompt", () => {
     expect(prompt.instructions).not.toContain("GENERATE CONTEXT.md");
   });
 
+  it("addresses the agent directly to break out of 'report output' mode", () => {
+    const prompt = getDeveloperPostInitPrompt();
+    expect(prompt.instructions).toMatch(/YOU are the agent/);
+    expect(prompt.instructions).toContain("Do not paraphrase this block");
+    expect(prompt.instructions).toContain("Begin with Step 1 immediately");
+  });
+
   it("tells the agent not to talk about governance on day one", () => {
     const prompt = getDeveloperPostInitPrompt();
-    expect(prompt.instructions).toMatch(/Don.?t mention versioning/i);
+    expect(prompt.instructions).toMatch(/Don.?t mention[\s\S]*?versioning/i);
     expect(prompt.instructions).toContain("compliance unless the user asks");
   });
 

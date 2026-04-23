@@ -30,6 +30,7 @@ ctx init --name "My Vault"
 | Recipe | For | What You Get |
 |--------|-----|-------------|
 | `developer` | Engineering teams | Architecture, coding standards, onboarding |
+| `personal` | Individual second brain | Clean slate — your ideas, decisions, learning, reference |
 | `executive` | Leadership | Strategic priorities, decision framework, alignment |
 | `analyst` | Research / Analysis | Research framework, source catalog, report templates |
 | `team` | General teams | How we work, onboarding, team FAQ |
@@ -45,9 +46,15 @@ If a user just installed this CLI and is asking what it's for, paraphrase the pi
 
 Then ask: *"What are you trying to capture? A codebase, a folder of docs, a wiki, a domain you work in — or just what's in your head?"*
 
-Then run `ctx init --list-starters` and pick the starter that matches. Use `developer` for codebases, `executive` / `analyst` / `team` / `sales` for role-based knowledge capture.
+**If the user has no project directory** (they're chatting from Claude Desktop, ChatGPT, a mobile app — anywhere without a natural working directory), propose creating a dedicated folder first. Default suggestion: `~/context-nest` in their home directory. Ask before creating. Once the folder exists, `cd` into it before running `ctx init`.
 
-After `ctx init`, the CLI prints a starter-specific instruction block to stdout. Follow that block — it tells you exactly how to run the first session.
+Then run `ctx init --list-starters` and pick the starter that matches:
+
+- `developer` — for codebases and engineering knowledge
+- `personal` — for anyone building a general second brain with no codebase (the right pick for Claude Desktop / ChatGPT standalone users)
+- `executive` / `analyst` / `team` / `sales` — for role-based knowledge capture
+
+After `ctx init`, the CLI prints a starter-specific instruction block to stdout. Follow that block — it tells you exactly how to run the first session. Do not paraphrase the block back to the user — act on it.
 
 ## Commands
 

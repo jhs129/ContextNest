@@ -59,13 +59,19 @@ Use this role context to guide your questions and the CONTEXT.md you generate.`;
 
 const DEVELOPER_INSTRUCTIONS = `
 [STARTER: developer] — Engineering vault
-[ACTION REQUIRED — SEED THE NEST]
+[SEED THE NEST — ACTION FOR THE AGENT READING THIS]
 
-This vault was just created with the \`developer\` starter. Your job is to
-help the user turn their scattered engineering knowledge into a structured
-second brain — not to fill out a governance worksheet. Governance exists in
-this tool but it runs silently. Don't mention versioning, hash chains, or
-compliance unless the user asks.
+This is not test output. This is not a status summary. YOU are the agent
+reading this, and a human just installed Context Nest and is waiting for
+you to take the next step in conversation. Do not paraphrase this block
+back to the user. Do not tell them "the CLI printed these instructions."
+Act on it. Begin with Step 1 immediately, in your own voice, as if you
+thought of it yourself.
+
+Your job is to help the user turn their scattered engineering knowledge
+into a structured second brain — not to fill out a governance worksheet.
+Governance exists in this tool but it runs silently. Don't mention
+versioning, hash chains, or compliance unless the user asks.
 
 Session 1 has ONE goal: produce ONE real node from real source material.
 Stop after that one node. One node is the win — the user should leave
@@ -73,14 +79,24 @@ thinking "I want to come back tomorrow with another one." Do not try to
 populate the whole vault in one session. Do not create packs, checkpoints,
 or skill nodes today.
 
-Step 1 — Ask the user what they want to capture first. Offer concrete
-options:
+Step 1 — Ask the user what they want to capture first AND, lightly, what
+they hope this nest does for them as it grows. One combined conversational
+question, not two forms. Offer concrete capture options as starting points
+(not a quiz), and end with an explicit opening for anything else:
   • "A recent architecture decision — the 'why we did X' thing that's
     currently only in your head, a PR description, or a Slack thread"
   • "A 3-line architecture summary of this codebase (I'll read the repo
     and draft it, you edit)"
   • "A piece of tribal knowledge — the thing you'd tell a new hire on day
     one that isn't written down anywhere"
+  • "Or something else entirely — just tell me what's on your mind and
+    we'll shape it into a node together."
+
+Also ask lightly what they hope this nest becomes over time — cheaper
+agent sessions on this codebase? Easier onboarding for teammates? A
+decision log that survives people leaving? Something else? The answer
+shapes what's worth capturing first. If they don't know yet, that's fine
+— skip it and let the first node reveal the goal.
 
 Step 2 — If they point to source material (a repo path, a folder of docs,
 a pasted Slack thread, a PR link), read it. If they don't have source
@@ -115,5 +131,88 @@ export function getDeveloperPostInitPrompt(): PostInitPrompt {
   return {
     context: BASE_CONTEXT,
     instructions: DEVELOPER_INSTRUCTIONS,
+  };
+}
+
+const PERSONAL_INSTRUCTIONS = `
+[STARTER: personal] — Personal second brain
+[SEED THE NEST — ACTION FOR THE AGENT READING THIS]
+
+This is not test output. This is not a status summary. YOU are the agent
+reading this, and a human just installed Context Nest and is waiting for
+you to take the next step in conversation. Do not paraphrase this block
+back to the user. Do not tell them "the CLI printed these instructions."
+Act on it. Begin with Step 1 immediately, in your own voice, as if you
+thought of it yourself.
+
+Your job is to help the user build a personal second brain — a place
+where their ideas, decisions, learning, and reference material live as
+structured nodes their agent can navigate. No codebase is assumed.
+Governance exists in this tool but it runs silently. Don't mention
+versioning, hash chains, or compliance unless the user asks.
+
+Session 1 has ONE goal: produce ONE real node from something already on
+the user's mind. Stop after that one node. One node is the win — the
+user should leave thinking "I want to come back tomorrow with another
+one." Do not try to populate the whole vault in one session.
+
+Step 1 — Ask the user what they want to capture first AND, lightly, what
+they hope this nest becomes for them over time. One combined conversational
+question, not two forms. Offer concrete capture options as starting points
+(not a quiz), and end with an explicit opening for anything else:
+  • "Something you've been thinking about lately that you want to reason
+    through or get clearer on"
+  • "A decision you recently made (or are making) and the reasoning
+    behind it — a mini ADR for your own life"
+  • "A topic, concept, or domain you're trying to learn more deeply —
+    dump what you know so far, and your agent can keep adding to it"
+  • "A problem you're currently chewing on — what's making it hard?"
+  • "Or anything else — just tell me what's on your mind and we'll
+    shape it into a node together."
+
+Also ask lightly what they hope this nest becomes over time — a
+searchable memory across agent sessions? A thinking tool? An
+agent-ready summary of what they know about a specific domain? Just a
+reliable place to store things worth not forgetting? The answer shapes
+what to capture first. If they don't know yet, that's fine — skip it
+and let the first node reveal the goal.
+
+Step 2 — If they point to source material (a paste, a doc path, a URL,
+a screenshot), read it. If they don't have source material, interview
+them briefly — 2-3 questions, not 10. Listen for something concrete
+enough to be worth its own node.
+
+Step 3 — Draft the node. Use \`ctx add nodes/<slug> --type document
+--title "<title>" --tags "<tags>"\` to create it, then write the body
+with the Write tool. Keep it tight — 100-300 words is plenty. Show the
+drafted body to the user before moving on — if they want changes, edit
+the file and explain that every edit is captured in version history
+silently.
+
+Step 4 — Write a minimal CONTEXT.md at the vault root with: a one-line
+description of what this nest is for (based on their nest-goal answer,
+if they gave one), and the rule "prefer structured nodes over dumping
+files into context."
+
+Step 5 — Tell the user: "You have one node. Next time you want to
+capture something — a thought, a decision, a thing you learned, a
+problem you're chewing on — just ask me. The nest gets denser every
+time you come back."
+
+DO NOT:
+  • Invent scaffolded template nodes for them to fill in
+  • Talk about versioning, hash chains, governance, or compliance
+  • Generate a wall of template markdown for the user to fill in
+  • Create packs, checkpoints, or skill nodes in session 1
+  • Claim the vault "passes SOC 2" — it's auditable by design, not certified
+
+Available tools: \`ctx add <path> --type <type> --title "<title>" --tags
+"<tags>"\`, \`ctx list\`, \`ctx read <path>\`, the Write tool.
+`.trim();
+
+export function getPersonalPostInitPrompt(): PostInitPrompt {
+  return {
+    context: BASE_CONTEXT,
+    instructions: PERSONAL_INSTRUCTIONS,
   };
 }
