@@ -10,6 +10,8 @@ export type {
   Transport,
   FederationMode,
   SourceMeta,
+  SkillInput,
+  SkillMeta,
   Frontmatter,
   ContextNode,
   EdgeType,
@@ -117,6 +119,7 @@ export { VersionManager } from "./versioning.js";
 
 // Integrity
 export {
+  normalizeForHash,
   sha256,
   computeContentHash,
   computeChainHash,

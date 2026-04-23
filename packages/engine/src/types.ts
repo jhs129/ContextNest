@@ -12,7 +12,8 @@ export type NodeType =
   | "prompt"
   | "source"
   | "tool"
-  | "reference";
+  | "reference"
+  | "skill";
 
 /** Document status (§1.5) */
 export type Status = "draft" | "published";
@@ -32,6 +33,29 @@ export interface SourceMeta {
   cache_ttl?: number;
 }
 
+/** Skill input parameter definition (§1.10) */
+export interface SkillInput {
+  name: string;
+  type: "string" | "number" | "boolean" | "array" | "object";
+  description?: string;
+  required?: boolean;
+  default?: unknown;
+}
+
+/** Skill metadata block — present only on type: skill nodes (§1.10) */
+export interface SkillMeta {
+  /** When this skill should be invoked (natural language trigger) */
+  trigger: string;
+  /** Input parameters the skill accepts */
+  inputs?: SkillInput[];
+  /** MCP tools or capabilities required to execute this skill */
+  tools_required?: string[];
+  /** Expected output format */
+  output_format?: "markdown" | "json" | "text" | "code";
+  /** Guard rails or constraints for execution */
+  guard_rails?: string[];
+}
+
 /** YAML frontmatter for a Context Nest document (§1.3–1.5) */
 export interface Frontmatter {
   title: string;
@@ -47,6 +71,7 @@ export interface Frontmatter {
   checksum?: string;
   metadata?: Record<string, unknown>;
   source?: SourceMeta;
+  skill?: SkillMeta;
 }
 
 /** A parsed Context Nest document */
@@ -103,6 +128,11 @@ export interface ContextYamlDocument {
     tools: string[];
     depends_on?: string[];
     cache_ttl?: number;
+  };
+  skill?: {
+    trigger: string;
+    tools_required?: string[];
+    output_format?: string;
   };
 }
 

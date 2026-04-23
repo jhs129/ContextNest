@@ -8,6 +8,14 @@ import type { VersionEntry, Checkpoint, VerificationReport, DocumentHistory } fr
 const GENESIS_SENTINEL = "contextnest:genesis:v1";
 
 /**
+ * Normalize content before hashing to tolerate cloud-sync byte mutations.
+ * Strips UTF-8 BOM and normalizes line endings to LF.
+ */
+export function normalizeForHash(content: string): string {
+  return content.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+}
+
+/**
  * Compute SHA-256 hash of a string, returning sha256:<hex> format.
  */
 export function sha256(input: string): string {
@@ -19,9 +27,12 @@ export function sha256(input: string): string {
  * Compute content_hash for a version entry (§8.2).
  * - Keyframe: SHA-256 of the full snapshot file content
  * - Diff: SHA-256 of the diff string
+ *
+ * Content is normalized (BOM stripped, line endings → LF) before hashing
+ * so that cloud-sync byte mutations do not break integrity chains.
  */
 export function computeContentHash(content: string): string {
-  return sha256(content);
+  return sha256(normalizeForHash(content));
 }
 
 /**

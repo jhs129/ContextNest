@@ -9,6 +9,7 @@ import { NestStorage } from "./storage.js";
 import { VersionManager } from "./versioning.js";
 import { CheckpointManager } from "./checkpoint.js";
 import { parseDocument, serializeDocument, getChecksumContent } from "./parser.js";
+import { normalizeForHash } from "./integrity.js";
 
 export interface PublishOptions {
   editedBy: string;
@@ -42,7 +43,7 @@ export async function publishDocument(
 
   // Compute document body checksum
   const serialized = serializeDocument(node);
-  const bodyContent = getChecksumContent(serialized);
+  const bodyContent = normalizeForHash(getChecksumContent(serialized));
   const checksum = createHash("sha256").update(bodyContent, "utf-8").digest("hex");
   node.frontmatter.checksum = `sha256:${checksum}`;
 

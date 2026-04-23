@@ -288,7 +288,7 @@ server.tool(
           required: false,
           type: "string",
           default: "document",
-          values: ["document", "snippet", "glossary", "persona", "prompt", "source", "tool", "reference"],
+          values: ["document", "snippet", "glossary", "persona", "prompt", "source", "tool", "reference", "skill"],
           descriptions: {
             document: "General documentation, guides, overviews",
             snippet: "Short, reusable text fragments",
@@ -298,6 +298,7 @@ server.tool(
             source: "Instructions for fetching live context (requires source block)",
             tool: "Tool documentation",
             reference: "External references",
+            skill: "Reusable agent skill with trigger, inputs, steps, and guard rails (requires skill block)",
           },
         },
         tags: {
@@ -321,6 +322,16 @@ server.tool(
             tools: { required: true, type: "string[]", constraints: "Non-empty array of tool names" },
             depends_on: { required: false, type: "string[]", constraints: "contextnest:// URIs, must be acyclic" },
             cache_ttl: { required: false, type: "integer", constraints: "Positive integer (seconds)" },
+          },
+        },
+        skill: {
+          required: "Only when type is 'skill'; must NOT be present on other types",
+          fields: {
+            trigger: { required: true, type: "string", description: "Natural language description of when this skill should be invoked" },
+            inputs: { required: false, type: "array", description: "Input parameters: { name, type, description, required, default }" },
+            tools_required: { required: false, type: "string[]", description: "MCP tools or capabilities needed to execute" },
+            output_format: { required: false, type: "string", values: ["markdown", "json", "text", "code"] },
+            guard_rails: { required: false, type: "string[]", description: "Constraints or safety rules for execution" },
           },
         },
       },
@@ -577,14 +588,17 @@ server.tool(
     path: z.string().describe("Document path (e.g., 'nodes/api-design')"),
     title: z.string().describe("Document title"),
     type: z
-      .enum(["document", "snippet", "glossary", "persona", "prompt", "source", "tool", "reference"])
+      .enum(["document", "snippet", "glossary", "persona", "prompt", "source", "tool", "reference", "skill"])
       .optional()
       .default("document")
       .describe("Node type"),
     tags: z.array(z.string()).optional().describe("Tags for the document"),
     body: z.string().optional().default("").describe("Markdown body content"),
+    trigger: z.string().optional().describe("Skill trigger description (required when type is 'skill')"),
+    tools_required: z.array(z.string()).optional().describe("Tools required for skill execution"),
+    output_format: z.enum(["markdown", "json", "text", "code"]).optional().describe("Skill output format"),
   },
-  async ({ path, title, type, tags, body }) => {
+  async ({ path, title, type, tags, body, trigger, tools_required, output_format }) => {
     const id = path.replace(/\.md$/, "");
 
     // Check if document already exists
@@ -607,6 +621,17 @@ server.tool(
       created_at: new Date().toISOString(),
       ...(tagList ? { tags: tagList } : {}),
     };
+
+    // Add skill block for skill nodes
+    if (type === "skill") {
+      frontmatter.skill = {
+        trigger: trigger || `when asked to ${title.toLowerCase()}`,
+        inputs: [],
+        tools_required: tools_required || [],
+        output_format: output_format || "markdown",
+        guard_rails: [],
+      };
+    }
 
     const node: ContextNode = {
       id,

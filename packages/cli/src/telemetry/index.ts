@@ -16,7 +16,7 @@ import type { TelemetryEvent, TelemetryPayload } from "./types.js";
 export type { TelemetryEvent, TelemetryPayload } from "./types.js";
 
 const CLI_VERSION = "0.3.0";
-const DEFAULT_ENDPOINT = "https://api.promptowl.com/v1/telemetry";
+const DEFAULT_ENDPOINT = "https://api.promptowl.ai/v1/telemetry";
 
 let enabled = false;
 let clientId: string | undefined;

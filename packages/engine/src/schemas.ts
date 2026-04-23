@@ -14,6 +14,7 @@ export const NODE_TYPES = [
   "source",
   "tool",
   "reference",
+  "skill",
 ] as const;
 
 export const STATUSES = ["draft", "published"] as const;
@@ -30,6 +31,22 @@ export const CHECKSUM_PATTERN = /^sha256:[a-f0-9]{64}$/;
 export const CONTEXT_NEST_URI_PATTERN = /^contextnest:\/\//;
 
 const tagSchema = z.string().regex(TAG_PATTERN, "Tag must match pattern: ^#?[a-zA-Z][a-zA-Z0-9_-]*$");
+
+const skillInputSchema = z.object({
+  name: z.string().min(1),
+  type: z.enum(["string", "number", "boolean", "array", "object"]),
+  description: z.string().optional(),
+  required: z.boolean().optional(),
+  default: z.unknown().optional(),
+});
+
+const skillMetaSchema = z.object({
+  trigger: z.string().min(1),
+  inputs: z.array(skillInputSchema).optional(),
+  tools_required: z.array(z.string()).optional(),
+  output_format: z.enum(["markdown", "json", "text", "code"]).optional(),
+  guard_rails: z.array(z.string()).optional(),
+});
 
 const sourceMetaSchema = z.object({
   transport: z.enum(TRANSPORTS),          // Rule 10
@@ -58,6 +75,7 @@ export const frontmatterSchema = z
     checksum: z.string().regex(CHECKSUM_PATTERN, "Checksum must match sha256:<64 hex chars>").optional(), // Rule 8
     metadata: z.record(z.unknown()).optional(),
     source: sourceMetaSchema.optional(),
+    skill: skillMetaSchema.optional(),
   })
   .superRefine((data, ctx) => {
     // Rule 9: source block MUST be present when type is "source"
@@ -74,6 +92,22 @@ export const frontmatterSchema = z
         code: z.ZodIssueCode.custom,
         message: "Source block must not be present when type is not 'source' (§13 rule 17)",
         path: ["source"],
+      });
+    }
+    // Rule 18: skill block MUST be present when type is "skill"
+    if (data.type === "skill" && !data.skill) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Skill block is required when type is 'skill' (§1.10)",
+        path: ["skill"],
+      });
+    }
+    // Rule 19: skill block MUST NOT be present on non-skill types
+    if (data.type && data.type !== "skill" && data.skill) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Skill block must not be present when type is not 'skill'",
+        path: ["skill"],
       });
     }
   });
