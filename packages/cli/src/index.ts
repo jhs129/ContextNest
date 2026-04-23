@@ -5,7 +5,10 @@
 import fs from "node:fs";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import pathMod from "node:path";
+import { createRequire } from "node:module";
 import { Command } from "commander";
+
+const pkg = createRequire(import.meta.url)("../package.json") as { version: string };
 import chalk from "chalk";
 import {
   NestStorage,
@@ -40,7 +43,7 @@ const program = new Command();
 program
   .name("ctx")
   .description("Context Nest CLI — manage structured, versioned context vaults")
-  .version("0.5.1");
+  .version(pkg.version);
 
 // Helper: resolve vault root — walks up from cwd to find .context/config.yaml (like git finds .git/)
 function getVaultRoot(): string {
