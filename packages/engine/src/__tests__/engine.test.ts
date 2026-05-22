@@ -17,6 +17,8 @@ import {
   computeContentHash,
   computeChainHash,
   computeCheckpointHash,
+  getLatestCheckpoint,
+  getLatestCheckpointNumber,
   canonicalJson,
   verifyDocumentChain,
   buildRelationships,
@@ -774,6 +776,40 @@ describe("Index Generation", () => {
     expect(indexMd).toContain("API Design");
     expect(indexMd).toContain("contextnest://nodes/api-design");
     expect(indexMd).toContain("Total documents: 1");
+  });
+});
+
+// ─── Checkpoint helpers ──────────────────────────────────────────────────────
+
+describe("Checkpoint helpers", () => {
+  it("getLatestCheckpoint returns null for null/undefined history", () => {
+    expect(getLatestCheckpoint(null)).toBeNull();
+    expect(getLatestCheckpoint(undefined)).toBeNull();
+  });
+
+  it("getLatestCheckpoint returns the last entry", () => {
+    const history = {
+      checkpoints: [
+        { checkpoint: 1, hash: "h1", timestamp: "t1" } as any,
+        { checkpoint: 2, hash: "h2", timestamp: "t2" } as any,
+      ],
+    } as any;
+    expect(getLatestCheckpoint(history)?.checkpoint).toBe(2);
+  });
+
+  it("getLatestCheckpointNumber returns 0 for null/undefined", () => {
+    expect(getLatestCheckpointNumber(null)).toBe(0);
+    expect(getLatestCheckpointNumber(undefined)).toBe(0);
+  });
+
+  it("getLatestCheckpointNumber returns the latest number", () => {
+    const history = {
+      checkpoints: [
+        { checkpoint: 1, hash: "h1", timestamp: "t1" } as any,
+        { checkpoint: 7, hash: "h7", timestamp: "t7" } as any,
+      ],
+    } as any;
+    expect(getLatestCheckpointNumber(history)).toBe(7);
   });
 });
 
